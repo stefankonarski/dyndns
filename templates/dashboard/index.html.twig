@@ -3,62 +3,57 @@
 {% block title %}Dashboard{% endblock %}
 
 {% block body %}
-    <div class="dashboard-sections">
-        <section class="grid cards">
-            <article class="card">
-                <h3 title="Konfigurierte DNS-Zone">🌐 Domain</h3>
-                <p>{{ config.domain ?: 'nicht gesetzt' }}</p>
-                <small>Zone-ID: {{ config.zoneId ?: 'nicht gesetzt' }}</small>
-            </article>
-            <article class="card">
-                <h3 title="Subdomain + Domain">🧩 Recordname</h3>
-                <p>{{ recordName ?: 'nicht gesetzt' }}</p>
-                <small>Subdomain: {{ config.subdomain }}</small>
-            </article>
-            <article class="card">
-                <h3 title="Aktueller A-Record">🟦 IPv4 (A)</h3>
-                <p>{{ aRecord ? aRecord.value : 'kein Wert' }}</p>
-                <small>Status: {{ config.ipv4Enabled ? 'aktiv' : 'inaktiv' }}</small>
-            </article>
-            <article class="card">
-                <h3 title="Aktueller AAAA-Record">🟩 IPv6 (AAAA)</h3>
-                <p>{{ aaaaRecord ? aaaaRecord.value : (config.manualIpv6 ?: 'kein Wert') }}</p>
-                <small>Status: {{ config.ipv6Enabled ? 'aktiv' : 'inaktiv' }}</small>
-            </article>
-            <article class="card">
-                <h3 title="TTL für DNS-Records">⏱ TTL</h3>
-                <p>{{ config.ttl }} Sekunden</p>
-                <small>Default: 120</small>
-            </article>
-            <article class="card">
-                <h3 title="Hetzner API Status">🔌 Hetzner API</h3>
-                <p>
-                    {% if hetznerTokenConfigured %}
-                        {{ hetznerReachable ? 'erreichbar' : 'nicht erreichbar' }}
-                    {% else %}
-                        Token fehlt
-                    {% endif %}
-                </p>
-                <small>Token nur via ENV</small>
-            </article>
-        </section>
-
-        <section class="grid cards">
-            <article class="card">
-                <h3 title="Letzter Kontakt der Fritzbox">📡 Letzter Kontakt</h3>
-                <p>{{ lastContact ? lastContact.createdAt|date('Y-m-d H:i:s') : 'kein Eintrag' }}</p>
-                <small>{{ lastContact ? lastContact.result.value : '' }}</small>
-            </article>
-            <article class="card">
-                <h3 title="Letztes erfolgreiches Update">✅ Letzter Erfolg</h3>
-                <p>{{ lastSuccess ? lastSuccess.createdAt|date('Y-m-d H:i:s') : 'kein Eintrag' }}</p>
-                <small>{{ lastSuccess ? lastSuccess.result.value : '' }}</small>
-            </article>
-            <article class="card">
-                <h3 title="Letzter fehlgeschlagener Request">⚠️ Letzter Fehler</h3>
-                <p>{{ lastFailure ? lastFailure.createdAt|date('Y-m-d H:i:s') : 'kein Eintrag' }}</p>
-                <small>{{ lastFailure ? lastFailure.result.value : '' }}</small>
-            </article>
-        </section>
-    </div>
+    <section class="grid cards">
+        <article class="card">
+            <h3 title="Konfigurierte DNS-Zone">🌐 Domain</h3>
+            <p>{{ config.domain ?: 'nicht gesetzt' }}</p>
+            <small>Zone-ID: {{ config.zoneId ?: 'nicht gesetzt' }}</small>
+        </article>
+        <article class="card">
+            <h3 title="Subdomain + Domain">🧩 Recordname</h3>
+            <p>{{ recordName ?: 'nicht gesetzt' }}</p>
+            <small>Subdomain: {{ config.subdomain }}</small>
+        </article>
+        <article class="card">
+            <h3 title="Aktueller A-Record">🟦 IPv4 (A)</h3>
+            <p>{{ aRecord ? aRecord.value : 'kein Wert' }}</p>
+            <small>Status: {{ config.ipv4Enabled ? 'aktiv' : 'inaktiv' }}</small>
+        </article>
+        <article class="card">
+            <h3 title="Aktueller AAAA-Record">🟩 IPv6 (AAAA)</h3>
+            <p>{{ aaaaRecord ? aaaaRecord.value : (config.manualIpv6 ?: 'kein Wert') }}</p>
+            <small>Status: {{ config.ipv6Enabled ? 'aktiv' : 'inaktiv' }}</small>
+        </article>
+        <article class="card">
+            <h3 title="TTL für DNS-Records">⏱ TTL</h3>
+            <p>{{ config.ttl }} Sekunden</p>
+            <small>Default: 120</small>
+        </article>
+        <article class="card">
+            <h3 title="Hetzner API Status">🔌 Hetzner API</h3>
+            <p>
+                {% if hetznerTokenConfigured %}
+                    {{ hetznerReachable ? 'erreichbar' : 'nicht erreichbar' }}
+                {% else %}
+                    Token fehlt
+                {% endif %}
+            </p>
+            <small>Token nur via ENV</small>
+        </article>
+        <article class="card">
+            <h3 title="Letzter Kontakt der Fritzbox">📡 Letzter Kontakt</h3>
+            <p>{{ lastContact ? lastContact.createdAt|date('Y-m-d H:i:s') : 'kein Eintrag' }}</p>
+            <small>{{ lastContact ? lastContact.result.value : '' }}</small>
+        </article>
+        <article class="card">
+            <h3 title="Letztes erfolgreiches Update">✅ Letzter Erfolg</h3>
+            <p>{{ lastSuccess ? lastSuccess.createdAt|date('Y-m-d H:i:s') : 'kein Eintrag' }}</p>
+            <small>{{ lastSuccess ? lastSuccess.result.value : '' }}</small>
+        </article>
+        <article class="card">
+            <h3 title="Letzter fehlgeschlagener Request">⚠️ Letzter Fehler</h3>
+            <p>{{ lastFailure ? lastFailure.createdAt|date('Y-m-d H:i:s') : 'kein Eintrag' }}</p>
+            <small>{{ lastFailure ? lastFailure.result.value : '' }}</small>
+        </article>
+    </section>
 {% endblock %}

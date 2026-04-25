@@ -19,9 +19,9 @@ class HistorySearchController extends AbstractController
     #[Route(path: '', name: 'app_history', methods: ['GET', 'POST'])]
     public function index(Request $request, IpHistoryRepository $ipHistoryRepository): Response
     {
-        $timestampInput = trim((string) $request->get('timestamp', ''));
-        $fromInput = trim((string) $request->get('from', ''));
-        $toInput = trim((string) $request->get('to', ''));
+        $timestampInput = $this->getInput($request, 'timestamp');
+        $fromInput = $this->getInput($request, 'from');
+        $toInput = $this->getInput($request, 'to');
 
         $timestampResult = null;
         $intervalResult = null;
@@ -87,5 +87,15 @@ class HistorySearchController extends AbstractController
             return null;
         }
     }
-}
 
+    private function getInput(Request $request, string $key): string
+    {
+        $value = $request->query->get($key);
+
+        if (null === $value || '' === trim((string) $value)) {
+            $value = $request->request->get($key, '');
+        }
+
+        return trim((string) $value);
+    }
+}

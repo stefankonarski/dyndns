@@ -35,10 +35,11 @@ Siehe `.env.example`:
 - `APP_ENV=prod`
 - `APP_SECRET=...`
 - `DATABASE_URL=sqlite:////app/var/data/app.db`
-- `HETZNER_DNS_API_TOKEN=...`
+- `HETZNER_DNS_API_TOKEN=...` (API-Token aus der Hetzner Console / Cloud API)
 - `TRUSTED_PROXIES=...`
 
 Hinweis: `HETZNER_DNS_API_TOKEN` wird **nur** aus ENV gelesen, nie in SQLite gespeichert und nie im UI angezeigt.
+Der Token muss aus der Hetzner Console stammen (Cloud API, DNS-Berechtigung), nicht aus der alten DNS-Console.
 
 ## Lokale Installation (ohne Docker)
 
@@ -187,4 +188,3 @@ Abgedeckte Kernfälle:
 - API-Token nur via ENV
 - Öffentlicher Endpunkt nur per Rate-Limit + Lock + Validierung
 - Keine technischen Rohfehler im UI
-

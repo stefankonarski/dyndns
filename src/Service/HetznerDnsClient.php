@@ -10,7 +10,12 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 class HetznerDnsClient
 {
-    private const LEGACY_BASE_URL = 'https://dns.hetzner.com/api/v1';
+    private const BASE_URL = 'https://api.hetzner.cloud/v1';
+
+    /**
+     * @var array<string, array{name: string, ttl: int}>
+     */
+    private array $zoneCache = [];
 
     public function __construct(
         private readonly HttpClientInterface $httpClient,
@@ -55,6 +60,8 @@ class HetznerDnsClient
             if ('' === $id || '' === $name) {
                 continue;
             }
+            $ttl = max(60, (int) ($zone['ttl'] ?? 3600));
+            $this->zoneCache[$id] = ['name' => $name, 'ttl' => $ttl];
             $result[] = ['id' => $id, 'name' => $name];
         }
 
@@ -68,29 +75,54 @@ class HetznerDnsClient
      */
     public function listRecords(string $zoneId, ?string $fullName = null): array
     {
-        $query = ['zone_id' => $zoneId];
+        $query = [];
         if (null !== $fullName && '' !== trim($fullName)) {
-            $query['name'] = mb_strtolower(trim($fullName));
+            $query['name'] = $this->toRelativeRecordName($zoneId, $fullName);
         }
 
-        $data = $this->requestJson('GET', '/records', ['query' => $query]);
-        $records = $data['records'] ?? [];
-        if (!is_array($records)) {
-            throw new HetznerDnsException('Unerwartete Antwort beim Laden der Records.');
+        $data = $this->requestJson('GET', '/zones/'.rawurlencode($zoneId).'/rrsets', ['query' => $query]);
+        $rrsets = $data['rrsets'] ?? [];
+        if (!is_array($rrsets)) {
+            throw new HetznerDnsException('Unerwartete Antwort beim Laden der RRSets.');
         }
 
+        $zoneTtl = $this->resolveZoneTtl($zoneId);
         $result = [];
-        foreach ($records as $record) {
-            if (!is_array($record)) {
+        foreach ($rrsets as $rrset) {
+            if (!is_array($rrset)) {
                 continue;
             }
-            $result[] = [
-                'id' => (string) ($record['id'] ?? ''),
-                'type' => strtoupper((string) ($record['type'] ?? '')),
-                'name' => mb_strtolower((string) ($record['name'] ?? '')),
-                'value' => trim((string) ($record['value'] ?? '')),
-                'ttl' => (int) ($record['ttl'] ?? 120),
-            ];
+            $rrName = mb_strtolower(trim((string) ($rrset['name'] ?? '')));
+            $rrType = strtoupper(trim((string) ($rrset['type'] ?? '')));
+            if ('' === $rrName || '' === $rrType) {
+                continue;
+            }
+
+            $ttlRaw = $rrset['ttl'] ?? null;
+            $ttl = is_int($ttlRaw) ? max(60, $ttlRaw) : $zoneTtl;
+
+            $records = $rrset['records'] ?? [];
+            if (!is_array($records)) {
+                continue;
+            }
+
+            foreach ($records as $record) {
+                if (!is_array($record)) {
+                    continue;
+                }
+                $value = trim((string) ($record['value'] ?? ''));
+                if ('' === $value) {
+                    continue;
+                }
+
+                $result[] = [
+                    'id' => $this->encodeRecordId($zoneId, $rrName, $rrType, $value),
+                    'type' => $rrType,
+                    'name' => $this->toFullRecordName($zoneId, $rrName),
+                    'value' => $value,
+                    'ttl' => $ttl,
+                ];
+            }
         }
 
         return $result;
@@ -101,17 +133,26 @@ class HetznerDnsClient
      */
     public function createRecord(string $zoneId, string $type, string $name, string $value, int $ttl): array
     {
-        $data = $this->requestJson('POST', '/records', [
+        $rrType = strtoupper($type);
+        $rrName = $this->toRelativeRecordName($zoneId, $name);
+        $this->requestJson('POST', '/zones/'.rawurlencode($zoneId).'/rrsets', [
             'json' => [
-                'zone_id' => $zoneId,
-                'type' => strtoupper($type),
-                'name' => mb_strtolower($name),
-                'value' => $value,
+                'name' => $rrName,
+                'type' => $rrType,
                 'ttl' => $ttl,
+                'records' => [
+                    ['value' => $value],
+                ],
             ],
         ]);
 
-        return $this->normalizeRecordFromResponse($data);
+        return [
+            'id' => $this->encodeRecordId($zoneId, $rrName, $rrType, $value),
+            'type' => $rrType,
+            'name' => $this->toFullRecordName($zoneId, $rrName),
+            'value' => trim($value),
+            'ttl' => $ttl,
+        ];
     }
 
     /**
@@ -119,23 +160,50 @@ class HetznerDnsClient
      */
     public function updateRecord(string $recordId, string $zoneId, string $type, string $name, string $value, int $ttl): array
     {
-        $data = $this->requestJson('PUT', '/records/'.$recordId, [
+        $rrType = strtoupper($type);
+        $rrName = $this->toRelativeRecordName($zoneId, $name);
+
+        $basePath = '/zones/'.rawurlencode($zoneId).'/rrsets/'.rawurlencode($rrName).'/'.rawurlencode($rrType).'/actions';
+        $this->requestJson('POST', $basePath.'/change_ttl', [
             'json' => [
-                'id' => $recordId,
-                'zone_id' => $zoneId,
-                'type' => strtoupper($type),
-                'name' => mb_strtolower($name),
-                'value' => $value,
                 'ttl' => $ttl,
             ],
         ]);
+        $this->requestJson('POST', $basePath.'/set_records', [
+            'json' => [
+                'records' => [
+                    ['value' => $value],
+                ],
+            ],
+        ]);
 
-        return $this->normalizeRecordFromResponse($data);
+        return [
+            'id' => $this->encodeRecordId($zoneId, $rrName, $rrType, $value),
+            'type' => $rrType,
+            'name' => $this->toFullRecordName($zoneId, $rrName),
+            'value' => trim($value),
+            'ttl' => $ttl,
+        ];
     }
 
     public function deleteRecord(string $recordId): void
     {
-        $this->requestJson('DELETE', '/records/'.$recordId);
+        $parts = $this->decodeRecordId($recordId);
+        if (null === $parts) {
+            throw new HetznerDnsException('Ungültige Record-ID für Löschoperation.');
+        }
+
+        $this->requestJson(
+            'POST',
+            '/zones/'.rawurlencode($parts['zoneId']).'/rrsets/'.rawurlencode($parts['rrName']).'/'.rawurlencode($parts['rrType']).'/actions/remove_records',
+            [
+                'json' => [
+                    'records' => [
+                        ['value' => $parts['value']],
+                    ],
+                ],
+            ],
+        );
     }
 
     /**
@@ -150,12 +218,12 @@ class HetznerDnsClient
         }
 
         $options['headers'] = array_merge($options['headers'] ?? [], [
-            'Auth-API-Token' => (string) $this->apiToken,
+            'Authorization' => 'Bearer '.(string) $this->apiToken,
             'Accept' => 'application/json',
         ]);
 
         try {
-            $response = $this->httpClient->request($method, self::LEGACY_BASE_URL.$path, $options);
+            $response = $this->httpClient->request($method, self::BASE_URL.$path, $options);
             $statusCode = $response->getStatusCode();
             $payload = $response->toArray(false);
         } catch (TransportExceptionInterface $e) {
@@ -180,24 +248,113 @@ class HetznerDnsClient
     }
 
     /**
-     * @param array<string, mixed> $data
+     * @return array{name: string, ttl: int}
      *
-     * @return array{id: string, type: string, name: string, value: string, ttl: int}
+     * @throws HetznerDnsException
      */
-    private function normalizeRecordFromResponse(array $data): array
+    private function getZoneMeta(string $zoneId): array
     {
-        $record = $data['record'] ?? $data;
-        if (!is_array($record)) {
-            throw new HetznerDnsException('Hetzner API Antwort enthält keinen gültigen Record.');
+        if (isset($this->zoneCache[$zoneId])) {
+            return $this->zoneCache[$zoneId];
+        }
+
+        $data = $this->requestJson('GET', '/zones/'.rawurlencode($zoneId));
+        $zone = $data['zone'] ?? null;
+        if (!is_array($zone)) {
+            throw new HetznerDnsException('Unerwartete Antwort beim Laden der Zone.');
+        }
+
+        $name = mb_strtolower(trim((string) ($zone['name'] ?? '')));
+        if ('' === $name) {
+            throw new HetznerDnsException('Zone-Name konnte nicht ermittelt werden.');
+        }
+
+        $ttl = max(60, (int) ($zone['ttl'] ?? 3600));
+        $meta = ['name' => $name, 'ttl' => $ttl];
+        $this->zoneCache[$zoneId] = $meta;
+
+        return $meta;
+    }
+
+    private function resolveZoneName(string $zoneId): string
+    {
+        return $this->getZoneMeta($zoneId)['name'];
+    }
+
+    private function resolveZoneTtl(string $zoneId): int
+    {
+        return $this->getZoneMeta($zoneId)['ttl'];
+    }
+
+    private function toRelativeRecordName(string $zoneId, string $recordName): string
+    {
+        $name = rtrim(mb_strtolower(trim($recordName)), '.');
+        if ('' === $name || '@' === $name) {
+            return '@';
+        }
+
+        $zoneName = $this->resolveZoneName($zoneId);
+        if ($name === $zoneName) {
+            return '@';
+        }
+
+        $suffix = '.'.$zoneName;
+        if (str_ends_with($name, $suffix)) {
+            $relative = substr($name, 0, -strlen($suffix));
+
+            return '' === $relative ? '@' : $relative;
+        }
+
+        return $name;
+    }
+
+    private function toFullRecordName(string $zoneId, string $relativeName): string
+    {
+        $name = rtrim(mb_strtolower(trim($relativeName)), '.');
+        $zoneName = $this->resolveZoneName($zoneId);
+
+        if ('' === $name || '@' === $name) {
+            return $zoneName;
+        }
+        if ($name === $zoneName || str_ends_with($name, '.'.$zoneName)) {
+            return $name;
+        }
+
+        return $name.'.'.$zoneName;
+    }
+
+    private function encodeRecordId(string $zoneId, string $rrName, string $rrType, string $value): string
+    {
+        return rawurlencode($zoneId)
+            .'|'.rawurlencode($rrName)
+            .'|'.rawurlencode(strtoupper($rrType))
+            .'|'.rawurlencode($value);
+    }
+
+    /**
+     * @return array{zoneId: string, rrName: string, rrType: string, value: string}|null
+     */
+    private function decodeRecordId(string $recordId): ?array
+    {
+        $parts = explode('|', $recordId, 4);
+        if (4 !== count($parts)) {
+            return null;
+        }
+
+        [$zoneId, $rrName, $rrType, $value] = $parts;
+        $zoneId = rawurldecode($zoneId);
+        $rrName = rawurldecode($rrName);
+        $rrType = strtoupper(rawurldecode($rrType));
+        $value = rawurldecode($value);
+        if ('' === $zoneId || '' === $rrName || '' === $rrType || '' === $value) {
+            return null;
         }
 
         return [
-            'id' => (string) ($record['id'] ?? ''),
-            'type' => strtoupper((string) ($record['type'] ?? '')),
-            'name' => mb_strtolower((string) ($record['name'] ?? '')),
-            'value' => trim((string) ($record['value'] ?? '')),
-            'ttl' => (int) ($record['ttl'] ?? 120),
+            'zoneId' => $zoneId,
+            'rrName' => $rrName,
+            'rrType' => $rrType,
+            'value' => $value,
         ];
     }
 }
-

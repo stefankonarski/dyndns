@@ -1,0 +1,13 @@
+.git
+.gitignore
+.idea
+node_modules
+vendor
+var/*
+!var/.gitignore
+public/build
+.env.local
+.env.*.local
+phpunit.xml
+tests
+
