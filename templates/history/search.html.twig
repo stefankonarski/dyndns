@@ -1,0 +1,59 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}IP-Historie{% endblock %}
+
+{% block body %}
+    <section class="panel">
+        <h1>IP-Historie suchen</h1>
+
+        <form method="get" class="filter-grid">
+            <label>Timestamp
+                <input type="datetime-local" name="timestamp" value="{{ timestampInput }}">
+            </label>
+            <button class="btn btn-primary" type="submit">Suche Timestamp</button>
+        </form>
+
+        <form method="get" class="filter-grid">
+            <label>Start <input type="datetime-local" name="from" value="{{ fromInput }}"></label>
+            <label>Ende <input type="datetime-local" name="to" value="{{ toInput }}"></label>
+            <button class="btn btn-primary" type="submit">Suche Intervall</button>
+        </form>
+    </section>
+
+    {% if timestampResult %}
+        <section class="panel">
+            <h2>Gültig am {{ timestampResult.at|date('Y-m-d H:i:s') }}</h2>
+            <p>IPv4: {{ timestampResult.ipv4 ? timestampResult.ipv4.ip : 'kein Eintrag' }}</p>
+            <p>IPv6: {{ timestampResult.ipv6 ? timestampResult.ipv6.ip : 'kein Eintrag' }}</p>
+        </section>
+    {% endif %}
+
+    {% if intervalResult %}
+        <section class="panel">
+            <h2>Intervall {{ intervalResult.from|date('Y-m-d H:i:s') }} bis {{ intervalResult.to|date('Y-m-d H:i:s') }}</h2>
+            <div class="grid history-columns">
+                <article>
+                    <h3>IPv4-Verlauf</h3>
+                    <ul>
+                        {% for row in intervalResult.ipv4 %}
+                            <li>{{ row.ip }} | {{ row.validFrom|date('Y-m-d H:i:s') }} - {{ row.validTo ? row.validTo|date('Y-m-d H:i:s') : 'offen' }}</li>
+                        {% else %}
+                            <li>Keine Einträge.</li>
+                        {% endfor %}
+                    </ul>
+                </article>
+                <article>
+                    <h3>IPv6-Verlauf</h3>
+                    <ul>
+                        {% for row in intervalResult.ipv6 %}
+                            <li>{{ row.ip }} | {{ row.validFrom|date('Y-m-d H:i:s') }} - {{ row.validTo ? row.validTo|date('Y-m-d H:i:s') : 'offen' }}</li>
+                        {% else %}
+                            <li>Keine Einträge.</li>
+                        {% endfor %}
+                    </ul>
+                </article>
+            </div>
+        </section>
+    {% endif %}
+{% endblock %}
+

@@ -1,0 +1,72 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Logs{% endblock %}
+
+{% block body %}
+    <section class="panel">
+        <h1>DynDNS Logs</h1>
+        <form method="get" class="filter-grid">
+            <label>Von <input type="datetime-local" name="from" value="{{ filters.from }}"></label>
+            <label>Bis <input type="datetime-local" name="to" value="{{ filters.to }}"></label>
+            <label>Status <input type="text" name="status" placeholder="updated" value="{{ filters.status }}"></label>
+            <label>Domain <input type="text" name="domain" value="{{ filters.domain }}"></label>
+            <label>IP <input type="text" name="ip" value="{{ filters.ip }}"></label>
+            <label>Auth
+                <select name="auth">
+                    <option value="" {{ filters.auth is empty ? 'selected' : '' }}>alle</option>
+                    <option value="1" {{ filters.auth == '1' ? 'selected' : '' }}>ok</option>
+                    <option value="0" {{ filters.auth == '0' ? 'selected' : '' }}>fehlgeschlagen</option>
+                </select>
+            </label>
+            <label>Record-Typ <input type="text" name="recordType" placeholder="A/AAAA" value="{{ filters.recordType }}"></label>
+            <button class="btn btn-primary" type="submit">Filtern</button>
+        </form>
+    </section>
+
+    <section class="panel">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Zeit</th>
+                    <th>Status</th>
+                    <th>Domain</th>
+                    <th>IP</th>
+                    <th>Auth</th>
+                    <th>Record</th>
+                    <th>Client-IP</th>
+                    <th>User-Agent</th>
+                    <th>Details</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in pagination.items %}
+                    <tr>
+                        <td>{{ row.createdAt|date('Y-m-d H:i:s') }}</td>
+                        <td>{{ row.result.value }}</td>
+                        <td>{{ row.requestedDomain ?: '-' }}</td>
+                        <td>{{ row.ipaddr ?: '-' }}</td>
+                        <td>{{ row.authSuccess ? 'ok' : 'no' }}</td>
+                        <td>{{ row.recordType ?: '-' }}</td>
+                        <td>{{ row.clientIp ?: '-' }}</td>
+                        <td title="{{ row.userAgent }}">{{ row.userAgent ? row.userAgent|slice(0, 32) ~ (row.userAgent|length > 32 ? '…' : '') : '-' }}</td>
+                        <td><a href="{{ path('app_log_show', {id: row.id}) }}">Öffnen</a></td>
+                    </tr>
+                {% else %}
+                    <tr><td colspan="9">Keine Einträge.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <div class="pagination">
+            {% set query = app.request.query.all %}
+            {% if pagination.page > 1 %}
+                <a href="{{ path('app_logs', query|merge({page: pagination.page - 1})) }}">Zurück</a>
+            {% endif %}
+            <span>Seite {{ pagination.page }} / {{ pagination.pages }}</span>
+            {% if pagination.page < pagination.pages %}
+                <a href="{{ path('app_logs', query|merge({page: pagination.page + 1})) }}">Weiter</a>
+            {% endif %}
+        </div>
+    </section>
+{% endblock %}
+

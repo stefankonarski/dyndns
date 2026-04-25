@@ -1,0 +1,43 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Konfiguration{% endblock %}
+
+{% block body %}
+    <section class="panel">
+        <h1>DynDNS Konfiguration</h1>
+        <p class="muted">Hetzner Token wird ausschließlich über ENV gesetzt und niemals im UI angezeigt.</p>
+
+        <div class="statusline">
+            <span class="badge {{ hetznerTokenConfigured ? 'ok' : 'err' }}">
+                Token: {{ hetznerTokenConfigured ? 'vorhanden' : 'fehlt' }}
+            </span>
+            <span class="badge {{ hetznerReachable ? 'ok' : 'warn' }}">
+                API: {{ hetznerTokenConfigured ? (hetznerReachable ? 'erreichbar' : 'nicht erreichbar') : 'nicht getestet' }}
+            </span>
+        </div>
+
+        {{ form_start(form, {'attr': {'class': 'form-grid'}}) }}
+            {{ form_row(form.zoneSelection) }}
+            {{ form_row(form.subdomain) }}
+            {{ form_row(form.fritzboxUsername) }}
+            {{ form_row(form.fritzboxPassword) }}
+            {{ form_row(form.ttl) }}
+            {{ form_row(form.ipv4Enabled) }}
+            {{ form_row(form.ipv6Enabled) }}
+            {{ form_row(form.manualIpv6) }}
+
+            <div class="action-row">
+                {{ form_widget(form.save, {'attr': {'class': 'btn btn-primary', 'title': 'Speichert Konfiguration'}}) }}
+                {{ form_widget(form.forceSync, {'attr': {'class': 'btn', 'title': 'Erzwingt DNS-Synchronisierung'}}) }}
+                {{ form_widget(form.deleteAaaa, {
+                    'attr': {
+                        'class': 'btn btn-danger',
+                        'title': 'Löscht AAAA-Record',
+                        'onclick': 'return confirm("AAAA-Record wirklich löschen?")'
+                    }
+                }) }}
+            </div>
+        {{ form_end(form) }}
+    </section>
+{% endblock %}
+

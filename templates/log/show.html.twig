@@ -1,0 +1,31 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Log #{{ log.id }}{% endblock %}
+
+{% block body %}
+    <section class="panel">
+        <h1>Logeintrag #{{ log.id }}</h1>
+        <table class="table table-details">
+            <tbody>
+                <tr><th>Zeit</th><td>{{ log.createdAt|date('Y-m-d H:i:s') }}</td></tr>
+                <tr><th>Pfad</th><td>{{ log.requestPath }}</td></tr>
+                <tr><th>Methode</th><td>{{ log.httpMethod }}</td></tr>
+                <tr><th>Username</th><td>{{ log.username ?: '-' }}</td></tr>
+                <tr><th>Domain</th><td>{{ log.requestedDomain ?: '-' }}</td></tr>
+                <tr><th>IPv4</th><td>{{ log.ipaddr ?: '-' }}</td></tr>
+                <tr><th>Konfig. IPv6</th><td>{{ log.configuredIpv6 ?: '-' }}</td></tr>
+                <tr><th>Client-IP</th><td>{{ log.clientIp ?: '-' }}</td></tr>
+                <tr><th>User-Agent</th><td>{{ log.userAgent ?: '-' }}</td></tr>
+                <tr><th>Auth</th><td>{{ log.authSuccess ? 'ok' : 'fehlgeschlagen' }}</td></tr>
+                <tr><th>Result</th><td>{{ log.result.value }}</td></tr>
+                <tr><th>Message</th><td>{{ log.message ?: '-' }}</td></tr>
+                <tr><th>Dauer</th><td>{{ log.durationMs }} ms</td></tr>
+                <tr><th>Hetzner API aufgerufen</th><td>{{ log.hetznerCalled ? 'ja' : 'nein' }}</td></tr>
+                <tr><th>Recordname</th><td>{{ log.normalizedRecordName ?: '-' }}</td></tr>
+                <tr><th>Recordtyp</th><td>{{ log.recordType ?: '-' }}</td></tr>
+            </tbody>
+        </table>
+        <p><a href="{{ path('app_logs') }}">Zurück zur Liste</a></p>
+    </section>
+{% endblock %}
+

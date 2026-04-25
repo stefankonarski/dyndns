@@ -1,0 +1,26 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Admin Login{% endblock %}
+
+{% block body %}
+    <section class="panel panel-narrow">
+        <h1>Admin Login</h1>
+        <p class="muted">DynDNS-Verwaltung</p>
+
+        {% if error %}
+            <div class="flash flash-error">{{ error.messageKey|trans(error.messageData, 'security') }}</div>
+        {% endif %}
+
+        <form method="post" class="form-grid">
+            <label for="username">E-Mail</label>
+            <input id="username" name="_username" type="email" value="{{ last_username }}" autocomplete="email" required>
+
+            <label for="password">Passwort</label>
+            <input id="password" name="_password" type="password" autocomplete="current-password" required>
+
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">
+            <button class="btn btn-primary" type="submit">Anmelden</button>
+        </form>
+    </section>
+{% endblock %}
+
