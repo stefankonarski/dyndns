@@ -1,0 +1,9 @@
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+PROJECT_DIR=/opt/dyndns
+
+# Daily backup of SQLite data directory.
+15 2 * * * cd $PROJECT_DIR && $PROJECT_DIR/ops/backup-var-data.sh >> $PROJECT_DIR/var/log/cron-backup.log 2>&1
+
+# Daily DB log cleanup + file log rotation.
+30 2 * * * cd $PROJECT_DIR && $PROJECT_DIR/ops/maintenance-cron.sh >> $PROJECT_DIR/var/log/cron-maintenance.log 2>&1
