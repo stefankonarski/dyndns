@@ -147,6 +147,8 @@ a:hover {
     margin: 0 0 0.35rem;
     font-size: 1rem;
     font-weight: 600;
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
 .card small,
