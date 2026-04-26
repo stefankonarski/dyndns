@@ -57,6 +57,12 @@ Admin-User erstellen:
 php bin/console app:create-admin-user admin@example.org "SehrSicheresPasswort123"
 ```
 
+Admin-Passwort ändern:
+
+```bash
+php bin/console app:change-admin-password admin@example.org "NeuesSehrSicheresPasswort123"
+```
+
 Entwicklungsserver:
 
 ```bash
