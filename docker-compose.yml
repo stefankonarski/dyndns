@@ -7,12 +7,11 @@ services:
     restart: unless-stopped
     environment:
       APP_ENV: prod
-      APP_SECRET: ${APP_SECRET:-change-me-in-env}
+      APP_SECRET: ${APP_SECRET:?APP_SECRET is required}
       DATABASE_URL: sqlite:////app/var/data/app.db
-      HETZNER_DNS_API_TOKEN: ${HETZNER_DNS_API_TOKEN:-}
-      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-127.0.0.1,REMOTE_ADDR}
+      HETZNER_DNS_API_TOKEN: ${HETZNER_DNS_API_TOKEN:?HETZNER_DNS_API_TOKEN is required}
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-127.0.0.1,172.16.0.0/12}
     ports:
-      - "9099:80"
+      - "127.0.0.1:9099:80"
     volumes:
       - ./var:/app/var
-
