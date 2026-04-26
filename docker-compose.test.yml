@@ -1,0 +1,11 @@
+services:
+  dyndns-test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: test
+    environment:
+      APP_ENV: test
+      APP_SECRET: test-secret
+      DATABASE_URL: sqlite:////app/var/data/test.db
+      HETZNER_DNS_API_TOKEN: test-token
