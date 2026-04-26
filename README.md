@@ -10,6 +10,7 @@ Eigenes DynDNS-System für Fritzbox-Updates mit Hetzner DNS API.
 - Doctrine ORM + Migrationen
 - Docker (HTTP intern, TLS extern über Reverse Proxy)
 - Frontend-Assets via `npm run build`
+- PHPUnit 13 (Tests in Docker mit PHP 8.5)
 
 ## Funktionen
 
@@ -43,9 +44,11 @@ Der Token muss aus der Hetzner Console stammen (Cloud API, DNS-Berechtigung), ni
 
 ## Lokale Installation (ohne Docker)
 
+Voraussetzung lokal für Frontend-Build: Node.js `>=20.10`.
+
 ```bash
 composer install
-npm install
+npm ci
 npm run build
 mkdir -p var/data var/log
 php bin/console doctrine:migrations:migrate --no-interaction
@@ -171,6 +174,14 @@ Konfigurierbar:
 
 ## Tests
 
+Empfohlen (immer mit PHP 8.5 im Container):
+
+```bash
+docker compose -f docker-compose.test.yml run --build --rm dyndns-test
+```
+
+Lokal (nur wenn dein Host ebenfalls PHP 8.5 nutzt):
+
 ```bash
 php bin/phpunit
 ```
@@ -194,3 +205,7 @@ Abgedeckte Kernfälle:
 - API-Token nur via ENV
 - Öffentlicher Endpunkt nur per Rate-Limit + Lock + Validierung
 - Keine technischen Rohfehler im UI
+
+## Lizenz
+
+MIT (siehe `LICENSE`).
