@@ -6,6 +6,7 @@ namespace App\Controller;
 
 use App\Entity\DdnsLog;
 use App\Repository\DdnsLogRepository;
+use App\Service\DateTimeInputParser;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -17,13 +18,17 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 class LogController extends AbstractController
 {
     #[Route(path: '', name: 'app_logs', methods: ['GET'])]
-    public function index(Request $request, DdnsLogRepository $ddnsLogRepository): Response
+    public function index(
+        Request $request,
+        DdnsLogRepository $ddnsLogRepository,
+        DateTimeInputParser $dateTimeInputParser,
+    ): Response
     {
         $page = max(1, $request->query->getInt('page', 1));
         $perPage = 25;
 
-        $from = $this->parseDateTime($request->query->get('from'));
-        $to = $this->parseDateTime($request->query->get('to'));
+        $from = $dateTimeInputParser->parse($request->query->get('from'));
+        $to = $dateTimeInputParser->parse($request->query->get('to'));
         $status = $this->normalizeString($request->query->get('status'));
         $domain = $this->normalizeString($request->query->get('domain'));
         $ip = $this->normalizeString($request->query->get('ip'));
@@ -67,28 +72,6 @@ class LogController extends AbstractController
         ]);
     }
 
-    private function parseDateTime(mixed $input): ?\DateTimeImmutable
-    {
-        if (!is_string($input) || '' === trim($input)) {
-            return null;
-        }
-
-        $input = trim($input);
-        $formats = ['Y-m-d\TH:i', \DateTimeInterface::ATOM, 'Y-m-d H:i:s'];
-        foreach ($formats as $format) {
-            $dt = \DateTimeImmutable::createFromFormat($format, $input);
-            if (false !== $dt) {
-                return $dt;
-            }
-        }
-
-        try {
-            return new \DateTimeImmutable($input);
-        } catch (\Throwable) {
-            return null;
-        }
-    }
-
     private function normalizeString(mixed $input): ?string
     {
         if (!is_string($input)) {
@@ -99,4 +82,3 @@ class LogController extends AbstractController
         return '' === $value ? null : $value;
     }
 }
-

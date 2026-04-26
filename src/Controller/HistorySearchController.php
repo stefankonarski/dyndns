@@ -6,6 +6,7 @@ namespace App\Controller;
 
 use App\Enum\RecordType;
 use App\Repository\IpHistoryRepository;
+use App\Service\DateTimeInputParser;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -17,7 +18,11 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 class HistorySearchController extends AbstractController
 {
     #[Route(path: '', name: 'app_history', methods: ['GET', 'POST'])]
-    public function index(Request $request, IpHistoryRepository $ipHistoryRepository): Response
+    public function index(
+        Request $request,
+        IpHistoryRepository $ipHistoryRepository,
+        DateTimeInputParser $dateTimeInputParser,
+    ): Response
     {
         $timestampInput = $this->getInput($request, 'timestamp');
         $fromInput = $this->getInput($request, 'from');
@@ -27,7 +32,7 @@ class HistorySearchController extends AbstractController
         $intervalResult = null;
 
         if ('' !== $timestampInput) {
-            $timestamp = $this->parseDateTime($timestampInput);
+            $timestamp = $dateTimeInputParser->parse($timestampInput);
             if (null === $timestamp) {
                 $this->addFlash('error', 'Ungültiger Timestamp. Erlaubte Formate: YYYY-MM-DDTHH:MM oder ISO-8601.');
             } else {
@@ -40,8 +45,8 @@ class HistorySearchController extends AbstractController
         }
 
         if ('' !== $fromInput || '' !== $toInput) {
-            $from = $this->parseDateTime($fromInput);
-            $to = $this->parseDateTime($toInput);
+            $from = $dateTimeInputParser->parse($fromInput);
+            $to = $dateTimeInputParser->parse($toInput);
 
             if (null === $from || null === $to) {
                 $this->addFlash('error', 'Für Intervall-Suche müssen Start und Ende gültige Timestamps sein.');
@@ -64,28 +69,6 @@ class HistorySearchController extends AbstractController
             'timestampResult' => $timestampResult,
             'intervalResult' => $intervalResult,
         ]);
-    }
-
-    private function parseDateTime(string $input): ?\DateTimeImmutable
-    {
-        $input = trim($input);
-        if ('' === $input) {
-            return null;
-        }
-
-        $formats = ['Y-m-d\TH:i', \DateTimeInterface::ATOM, 'Y-m-d H:i:s'];
-        foreach ($formats as $format) {
-            $dt = \DateTimeImmutable::createFromFormat($format, $input);
-            if (false !== $dt) {
-                return $dt;
-            }
-        }
-
-        try {
-            return new \DateTimeImmutable($input);
-        } catch (\Throwable) {
-            return null;
-        }
     }
 
     private function getInput(Request $request, string $key): string

@@ -34,19 +34,13 @@ class CreateAdminUserCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $email = mb_strtolower(trim((string) $input->getArgument('email')));
-        $password = (string) $input->getArgument('password');
-
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            $output->writeln('<error>Ungültige E-Mail-Adresse.</error>');
-
+        $credentials = AdminCredentialInput::parseAndValidate($input, $output);
+        if (null === $credentials) {
             return Command::FAILURE;
         }
-        if (mb_strlen($password) < 12) {
-            $output->writeln('<error>Passwort muss mindestens 12 Zeichen lang sein.</error>');
 
-            return Command::FAILURE;
-        }
+        $email = $credentials['email'];
+        $password = $credentials['password'];
 
         $existing = $this->adminUserRepository->findOneBy(['email' => $email]);
         if (null !== $existing) {
@@ -68,4 +62,3 @@ class CreateAdminUserCommand extends Command
         return Command::SUCCESS;
     }
 }
-

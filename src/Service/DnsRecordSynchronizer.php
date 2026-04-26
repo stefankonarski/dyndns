@@ -29,14 +29,11 @@ class DnsRecordSynchronizer
 
     public function syncForFritzbox(DdnsConfig $config, string $ipv4, ?DdnsLog $logEntry = null, bool $force = false): SyncOutcome
     {
-        $ipv4Validation = $this->publicIpValidator->validatePublicIpv4($ipv4);
-        if (!$ipv4Validation->isValid()) {
-            throw new ConfigurationException($ipv4Validation->getMessage() ?? 'Ungültige IPv4.');
-        }
+        $targetIpv4 = $this->validatePublicIpv4OrFail($ipv4);
 
         return $this->syncInternal(
             $config,
-            $config->isIpv4Enabled() ? trim($ipv4) : null,
+            $config->isIpv4Enabled() ? $targetIpv4 : null,
             true,
             $this->resolveConfiguredIpv6Target($config),
             true,
@@ -52,11 +49,7 @@ class DnsRecordSynchronizer
         $targetIpv4 = null;
         $manageIpv4 = false;
         if (null !== $ipv4 && '' !== trim($ipv4)) {
-            $ipv4Validation = $this->publicIpValidator->validatePublicIpv4($ipv4);
-            if (!$ipv4Validation->isValid()) {
-                throw new ConfigurationException($ipv4Validation->getMessage() ?? 'Ungültige IPv4.');
-            }
-            $targetIpv4 = trim($ipv4);
+            $targetIpv4 = $this->validatePublicIpv4OrFail($ipv4);
             $manageIpv4 = true;
         }
 
@@ -150,11 +143,7 @@ class DnsRecordSynchronizer
                 $sourceA,
                 $logEntry,
             );
-            $messages[] = $action['message'];
-            $hetznerCalled = $hetznerCalled || $action['called'];
-            $created = $created || $action['result'] === DdnsResult::Created;
-            $updated = $updated || $action['result'] === DdnsResult::Updated;
-            $deleted = $deleted || $action['result'] === DdnsResult::Deleted;
+            $this->aggregateActionOutcome($action, $messages, $hetznerCalled, $created, $updated, $deleted);
             $recordTypeForLog = 'A';
         }
 
@@ -170,32 +159,63 @@ class DnsRecordSynchronizer
                 $sourceAaaa,
                 $logEntry,
             );
-            $messages[] = $action['message'];
-            $hetznerCalled = $hetznerCalled || $action['called'];
-            $created = $created || $action['result'] === DdnsResult::Created;
-            $updated = $updated || $action['result'] === DdnsResult::Updated;
-            $deleted = $deleted || $action['result'] === DdnsResult::Deleted;
+            $this->aggregateActionOutcome($action, $messages, $hetznerCalled, $created, $updated, $deleted);
             if (null === $recordTypeForLog || 'A' !== $recordTypeForLog) {
                 $recordTypeForLog = 'AAAA';
             }
         }
 
-        $result = DdnsResult::Unchanged;
-        if ($created) {
-            $result = DdnsResult::Created;
-        } elseif ($updated) {
-            $result = DdnsResult::Updated;
-        } elseif ($deleted) {
-            $result = DdnsResult::Deleted;
-        }
-
         return new SyncOutcome(
-            $result,
+            $this->resolveOverallResult($created, $updated, $deleted),
             implode(' ', array_filter($messages)),
             $hetznerCalled,
             $recordTypeForLog,
             $recordName,
         );
+    }
+
+    private function validatePublicIpv4OrFail(?string $ipv4): string
+    {
+        $ipv4Validation = $this->publicIpValidator->validatePublicIpv4($ipv4);
+        if (!$ipv4Validation->isValid()) {
+            throw new ConfigurationException($ipv4Validation->getMessage() ?? 'Ungültige IPv4.');
+        }
+
+        return trim((string) $ipv4);
+    }
+
+    /**
+     * @param array{result: DdnsResult, called: bool, message: string} $action
+     * @param list<string>                                              $messages
+     */
+    private function aggregateActionOutcome(
+        array $action,
+        array &$messages,
+        bool &$hetznerCalled,
+        bool &$created,
+        bool &$updated,
+        bool &$deleted,
+    ): void {
+        $messages[] = $action['message'];
+        $hetznerCalled = $hetznerCalled || $action['called'];
+        $created = $created || DdnsResult::Created === $action['result'];
+        $updated = $updated || DdnsResult::Updated === $action['result'];
+        $deleted = $deleted || DdnsResult::Deleted === $action['result'];
+    }
+
+    private function resolveOverallResult(bool $created, bool $updated, bool $deleted): DdnsResult
+    {
+        if ($created) {
+            return DdnsResult::Created;
+        }
+        if ($updated) {
+            return DdnsResult::Updated;
+        }
+        if ($deleted) {
+            return DdnsResult::Deleted;
+        }
+
+        return DdnsResult::Unchanged;
     }
 
     /**
@@ -302,4 +322,3 @@ class DnsRecordSynchronizer
         }
     }
 }
-
