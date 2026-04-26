@@ -41,6 +41,7 @@ Siehe `.env.example`:
 
 Hinweis: `HETZNER_DNS_API_TOKEN` wird **nur** aus ENV gelesen, nie in SQLite gespeichert und nie im UI angezeigt.
 Der Token muss aus der Hetzner Console stammen (Cloud API, DNS-Berechtigung), nicht aus der alten DNS-Console.
+`docker-compose.yml` erzwingt `APP_SECRET` und `HETZNER_DNS_API_TOKEN` beim Start.
 
 ## Lokale Installation (ohne Docker)
 
@@ -76,6 +77,8 @@ symfony server:start
 
 ```bash
 cp .env.example .env.local
+# .env.local bearbeiten (APP_SECRET, HETZNER_DNS_API_TOKEN, TRUSTED_PROXIES)
+set -a; . ./.env.local; set +a
 docker compose -f docker-compose.yml up -d --build
 ```
 
@@ -100,7 +103,15 @@ Wichtige persistente Daten:
 
 Backup-Empfehlung:
 
-- mindestens `./var/data` und `./var/log` regelmäßig sichern.
+- tägliches Backup von `./var/data` mit `./ops/backup-var-data.sh`
+- tägliche Wartung (DB-Log-Cleanup + Dateilog-Rotation) mit `./ops/maintenance-cron.sh`
+- Cron-Vorlage liegt unter `./ops/cron.example` (ersetze dort `PROJECT_DIR`)
+
+Cron installieren:
+
+```bash
+sed "s|^PROJECT_DIR=.*|PROJECT_DIR=$(pwd)|" ops/cron.example | crontab -
+```
 
 ## Migrationen
 
@@ -129,6 +140,12 @@ php bin/console app:sync-dns --ipv4=1.1.1.1
 php bin/console app:cleanup-ddns-logs --days=90
 ```
 
+Als täglicher Cron-Job:
+
+```bash
+./ops/maintenance-cron.sh
+```
+
 ## Fritzbox DynDNS URL
 
 Standard-Endpunkt:
@@ -152,6 +169,27 @@ Extern TLS-Termination, intern HTTP:
 - Internes Upstream-Ziel: `http://127.0.0.1:9099`
 
 Setze `TRUSTED_PROXIES` passend (z.B. Proxy-IP oder Netz), damit `X-Forwarded-*` korrekt verarbeitet wird.
+
+Für Docker-Setups ist meist `TRUSTED_PROXIES=127.0.0.1,172.16.0.0/12` ein sinnvoller Startwert.
+
+Nginx-Beispiel ohne Query-String im Access-Log für `/update`:
+
+```nginx
+log_format main_no_query '$remote_addr - $remote_user [$time_local] '
+                         '"$request_method $uri $server_protocol" $status $body_bytes_sent '
+                         '"$http_referer" "$http_user_agent"';
+
+location = /update {
+    access_log /var/log/nginx/dyndns_access.log main_no_query;
+    proxy_pass http://127.0.0.1:9099;
+}
+```
+
+Prüfen, dass keine Query-Strings für `/update` im Access-Log landen:
+
+```bash
+./ops/check-proxy-update-logging.sh /var/log/nginx/dyndns_access.log
+```
 
 ## Admin-Bereich
 
