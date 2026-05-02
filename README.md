@@ -20,7 +20,7 @@ Custom DynDNS system for Fritzbox updates using the Hetzner DNS API.
   - Fritzbox DynDNS username/password (separate, password stored as hash)
 - Idempotent DNS synchronization:
   - A record (IPv4 via `ipaddr`)
-  - AAAA record (manual IPv6 from admin configuration)
+  - AAAA record (IPv6 via `ipv6` or `ip6addr`)
 - Full request logging (without secrets)
 - Separate IP history with validity time ranges
 - History search:
@@ -151,21 +151,24 @@ Daily cron entrypoint:
 Default endpoint:
 
 ```text
-https://ddns.hoody.de/update?username=<username>&password=<pass>&domain=<domain>&ipaddr=<ipaddr>
+https://ddns.example.com/update?username=<username>&password=<pass>&domain=<domain>&ipaddr=<ipaddr>&ipv6=<ipv6>
 ```
 
 Processed query parameters:
 
 - `username`
-- `password`
+- `password` (`pass` also supported)
 - `domain`
-- `ipaddr`
+- `ipaddr` (`ipv4` also supported)
+- `ipv6` (`ip6addr` also supported)
+
+If IPv6 is enabled in the admin config, a valid public IPv6 must be sent with the update request.
 
 ## Reverse Proxy Example
 
 External TLS termination, internal HTTP:
 
-- Public: `https://ddns.hoody.de`
+- Public: `https://ddns.example.com`
 - Internal upstream target: `http://127.0.0.1:9099`
 
 Set `TRUSTED_PROXIES` correctly (for example proxy IP or network) so `X-Forwarded-*` is handled properly.
@@ -206,7 +209,6 @@ Configurable:
 - DynDNS username + DynDNS password
 - TTL
 - IPv4/IPv6 enabled/disabled
-- Manual IPv6
 - Delete AAAA record
 - Force sync
 
