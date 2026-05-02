@@ -66,6 +66,15 @@ class DnsRecordSynchronizer
             $targetIpv4 = $this->validatePublicIpv4OrFail($ipv4);
             $manageIpv4 = true;
         }
+        if ($config->isIpv6Enabled() && !$manageIpv4) {
+            return new SyncOutcome(
+                DdnsResult::Unchanged,
+                'Kein Update ausgefuehrt: IPv6 wird nur ueber DynDNS-Request mit "ipv6" oder "ip6addr" aktualisiert.',
+                false,
+                null,
+                $this->ddnsConfigService->normalizeRecordName($config),
+            );
+        }
 
         return $this->syncInternal(
             $config,

@@ -42,9 +42,6 @@ class DdnsConfig
     #[ORM\Column]
     private bool $ipv6Enabled = false;
 
-    #[ORM\Column(length: 64, nullable: true)]
-    private ?string $manualIpv6 = null;
-
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
     private \DateTimeImmutable $createdAt;
 
@@ -173,18 +170,6 @@ class DdnsConfig
         return $this;
     }
 
-    public function getManualIpv6(): ?string
-    {
-        return $this->manualIpv6;
-    }
-
-    public function setManualIpv6(?string $manualIpv6): self
-    {
-        $this->manualIpv6 = null !== $manualIpv6 ? mb_strtolower(trim($manualIpv6)) : null;
-
-        return $this;
-    }
-
     public function getCreatedAt(): \DateTimeImmutable
     {
         return $this->createdAt;
@@ -195,4 +180,3 @@ class DdnsConfig
         return $this->updatedAt;
     }
 }
-

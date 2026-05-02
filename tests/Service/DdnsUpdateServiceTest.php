@@ -250,6 +250,62 @@ class DdnsUpdateServiceTest extends TestCase
         self::assertSame('badip', $response->getMessage());
     }
 
+    public function testSupportsLegacyAliasParameters(): void
+    {
+        $config = $this->createBaseConfig();
+        $config->setIpv6Enabled(true);
+
+        $sync = $this->createMock(DnsRecordSynchronizer::class);
+        $sync->expects(self::once())
+            ->method('syncForFritzbox')
+            ->with($config, '1.1.1.1', '2001:4860:4860::8888', self::isInstanceOf(DdnsLog::class))
+            ->willReturn(new SyncOutcome(DdnsResult::Updated, 'A und AAAA aktualisiert.', true, 'A', 'home.example.org'));
+
+        [$service, $logger] = $this->createService($config, $sync);
+        $logger->expects(self::once())->method('save');
+
+        $request = new Request([
+            'username' => 'fritz',
+            'pass' => 'my-ddns-password',
+            'domain' => 'example.org',
+            'ipv4' => '1.1.1.1',
+            'ip6addr' => '2001:4860:4860::8888',
+        ]);
+
+        $response = $service->handle($request);
+        self::assertSame(200, $response->getHttpStatus());
+        self::assertSame(DdnsResult::Updated, $response->getResult());
+        self::assertStringStartsWith('good', $response->getMessage());
+    }
+
+    public function testDualStackRequestUsesBothAddresses(): void
+    {
+        $config = $this->createBaseConfig();
+        $config->setIpv6Enabled(true);
+
+        $sync = $this->createMock(DnsRecordSynchronizer::class);
+        $sync->expects(self::once())
+            ->method('syncForFritzbox')
+            ->with($config, '1.1.1.1', '2001:4860:4860::8888', self::isInstanceOf(DdnsLog::class))
+            ->willReturn(new SyncOutcome(DdnsResult::Updated, 'A und AAAA aktualisiert.', true, 'A', 'home.example.org'));
+
+        [$service, $logger] = $this->createService($config, $sync);
+        $logger->expects(self::once())->method('save');
+
+        $request = new Request([
+            'username' => 'fritz',
+            'password' => 'my-ddns-password',
+            'domain' => 'example.org',
+            'ipaddr' => '1.1.1.1',
+            'ipv6' => '2001:4860:4860::8888',
+        ]);
+
+        $response = $service->handle($request);
+        self::assertSame(200, $response->getHttpStatus());
+        self::assertSame(DdnsResult::Updated, $response->getResult());
+        self::assertStringStartsWith('good', $response->getMessage());
+    }
+
     /**
      * @return array{0: DdnsUpdateService, 1: DdnsLogger&MockObject}
      */

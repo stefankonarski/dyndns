@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Form\DdnsConfigType;
+use App\Enum\DdnsResult;
 use App\Service\DdnsAuthenticator;
 use App\Service\DdnsConfigService;
 use App\Service\DnsRecordSynchronizer;
@@ -85,8 +86,6 @@ class ConfigController extends AbstractController
                     $config->setFritzboxPasswordHash($ddnsAuthenticator->hashPassword($password));
                 }
 
-                $config->setManualIpv6(null);
-
                 $entityManager->persist($config);
                 $entityManager->flush();
 
@@ -104,9 +103,13 @@ class ConfigController extends AbstractController
 
                 if ($form->get('forceSync')->isClicked()) {
                     try {
-                        $dnsRecordSynchronizer->syncFromConfig($config, null, null, true);
+                        $outcome = $dnsRecordSynchronizer->syncFromConfig($config, null, null, true);
                         $entityManager->flush();
-                        $this->addFlash('success', 'Force-Sync wurde ausgeführt.');
+                        if (DdnsResult::Unchanged === $outcome->getResult()) {
+                            $this->addFlash('info', '' !== trim($outcome->getMessage()) ? $outcome->getMessage() : 'Force-Sync: keine Änderung erforderlich.');
+                        } else {
+                            $this->addFlash('success', 'Force-Sync wurde ausgeführt: '.$outcome->getMessage());
+                        }
                     } catch (\Throwable $e) {
                         $this->addFlash('error', 'Force-Sync fehlgeschlagen: '.$e->getMessage());
                     }

@@ -123,6 +123,23 @@ class DnsRecordSynchronizerTest extends TestCase
         self::assertSame(DdnsResult::Deleted, $result->getResult());
     }
 
+    public function testSyncFromConfigWithIpv6EnabledAndNoIpv4ReturnsHint(): void
+    {
+        $sut = $this->createSynchronizer($client, $history, $repo, $em);
+        $config = $this->createBaseConfig();
+        $config->setIpv6Enabled(true);
+
+        $client->expects(self::never())->method('listRecords');
+        $client->expects(self::never())->method('createRecord');
+        $client->expects(self::never())->method('updateRecord');
+        $client->expects(self::never())->method('deleteRecord');
+        $history->expects(self::never())->method('trackChange');
+
+        $result = $sut->syncFromConfig($config, null, null, true);
+        self::assertSame(DdnsResult::Unchanged, $result->getResult());
+        self::assertStringContainsString('IPv6', $result->getMessage());
+    }
+
     private function createSynchronizer(
         &$client,
         &$history,
