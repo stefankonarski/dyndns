@@ -24,7 +24,6 @@
             {{ form_row(form.ttl) }}
             {{ form_row(form.ipv4Enabled) }}
             {{ form_row(form.ipv6Enabled) }}
-            {{ form_row(form.manualIpv6) }}
 
             <div class="action-row">
                 {{ form_widget(form.save, {'attr': {'class': 'btn btn-primary', 'title': 'Speichert Konfiguration'}}) }}
@@ -40,4 +39,3 @@
         {{ form_end(form) }}
     </section>
 {% endblock %}
-

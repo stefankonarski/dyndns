@@ -38,7 +38,7 @@ class DnsRecordSynchronizerTest extends TestCase
         $repo->method('findOneByZoneNameAndType')->willReturn(null);
         $em->expects(self::atLeastOnce())->method('persist');
 
-        $result = $sut->syncForFritzbox($config, '1.1.1.1');
+        $result = $sut->syncForFritzbox($config, '1.1.1.1', null);
         self::assertSame(DdnsResult::Created, $result->getResult());
     }
 
@@ -59,7 +59,7 @@ class DnsRecordSynchronizerTest extends TestCase
         $repo->method('findOneByZoneNameAndType')->willReturn(null);
         $em->expects(self::atLeastOnce())->method('persist');
 
-        $result = $sut->syncForFritzbox($config, '1.1.1.1');
+        $result = $sut->syncForFritzbox($config, '1.1.1.1', null);
         self::assertSame(DdnsResult::Updated, $result->getResult());
     }
 
@@ -79,7 +79,7 @@ class DnsRecordSynchronizerTest extends TestCase
         $repo->method('findOneByZoneNameAndType')->willReturn(null);
         $em->expects(self::atLeastOnce())->method('persist');
 
-        $result = $sut->syncForFritzbox($config, '1.1.1.1');
+        $result = $sut->syncForFritzbox($config, '1.1.1.1', null);
         self::assertSame(DdnsResult::Unchanged, $result->getResult());
     }
 
@@ -87,7 +87,7 @@ class DnsRecordSynchronizerTest extends TestCase
     {
         $sut = $this->createSynchronizer($client, $history, $repo, $em);
         $config = $this->createBaseConfig();
-        $config->setIpv6Enabled(true)->setManualIpv6('2001:4860:4860::8888');
+        $config->setIpv4Enabled(false)->setIpv6Enabled(true);
 
         $client->method('isConfigured')->willReturn(true);
         $client->method('listRecords')->willReturn([]);
@@ -95,11 +95,11 @@ class DnsRecordSynchronizerTest extends TestCase
             ->method('createRecord')
             ->with('zone-1', 'AAAA', 'home.example.org', '2001:4860:4860::8888', 120)
             ->willReturn(['id' => 'r6', 'type' => 'AAAA', 'name' => 'home.example.org', 'value' => '2001:4860:4860::8888', 'ttl' => 120]);
-        $history->expects(self::once())->method('trackChange')->with(RecordType::AAAA, '2001:4860:4860::8888', IpHistorySource::Manual, null);
+        $history->expects(self::once())->method('trackChange')->with(RecordType::AAAA, '2001:4860:4860::8888', IpHistorySource::Fritzbox, null);
         $repo->method('findOneByZoneNameAndType')->willReturn(null);
         $em->expects(self::atLeastOnce())->method('persist');
 
-        $result = $sut->syncFromConfig($config);
+        $result = $sut->syncForFritzbox($config, null, '2001:4860:4860::8888');
         self::assertSame(DdnsResult::Created, $result->getResult());
         self::assertSame('AAAA', $result->getRecordType());
     }
@@ -108,7 +108,7 @@ class DnsRecordSynchronizerTest extends TestCase
     {
         $sut = $this->createSynchronizer($client, $history, $repo, $em);
         $config = $this->createBaseConfig();
-        $config->setIpv6Enabled(false)->setManualIpv6(null);
+        $config->setIpv6Enabled(false);
 
         $client->method('isConfigured')->willReturn(true);
         $client->method('listRecords')->willReturn([

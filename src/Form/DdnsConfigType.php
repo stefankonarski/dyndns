@@ -78,10 +78,6 @@ class DdnsConfigType extends AbstractType
                 'label' => 'IPv6 (AAAA-Record) aktiv',
                 'required' => false,
             ])
-            ->add('manualIpv6', TextType::class, [
-                'label' => 'Manuelle IPv6',
-                'required' => false,
-            ])
             ->add('save', SubmitType::class, [
                 'label' => 'Konfiguration speichern',
             ])

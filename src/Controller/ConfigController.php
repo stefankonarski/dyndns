@@ -10,7 +10,6 @@ use App\Service\DdnsConfigService;
 use App\Service\DnsRecordSynchronizer;
 use App\Service\HetznerDnsClient;
 use App\Service\HetznerZoneService;
-use App\Service\PublicIpValidator;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Form\FormError;
@@ -29,7 +28,6 @@ class ConfigController extends AbstractController
         DdnsConfigService $ddnsConfigService,
         HetznerZoneService $hetznerZoneService,
         DdnsAuthenticator $ddnsAuthenticator,
-        PublicIpValidator $publicIpValidator,
         DnsRecordSynchronizer $dnsRecordSynchronizer,
         HetznerDnsClient $hetznerDnsClient,
         EntityManagerInterface $entityManager,
@@ -74,15 +72,6 @@ class ConfigController extends AbstractController
                 $form->get('fritzboxPassword')->addError(new FormError('DynDNS-Passwort muss mindestens 10 Zeichen haben.'));
             }
 
-            if ($config->isIpv6Enabled()) {
-                $ipv6Validation = $publicIpValidator->validatePublicIpv6($config->getManualIpv6());
-                if (!$ipv6Validation->isValid()) {
-                    $form->get('manualIpv6')->addError(new FormError($ipv6Validation->getMessage() ?? 'Ungültige IPv6.'));
-                }
-            } elseif (null === $config->getManualIpv6() || '' === trim((string) $config->getManualIpv6())) {
-                $config->setManualIpv6(null);
-            }
-
             if (!$config->isIpv4Enabled() && !$config->isIpv6Enabled()) {
                 $form->addError(new FormError('Mindestens IPv4 oder IPv6 muss aktiviert sein.'));
             }
@@ -96,9 +85,7 @@ class ConfigController extends AbstractController
                     $config->setFritzboxPasswordHash($ddnsAuthenticator->hashPassword($password));
                 }
 
-                if (!$config->isIpv6Enabled()) {
-                    $config->setManualIpv6(null);
-                }
+                $config->setManualIpv6(null);
 
                 $entityManager->persist($config);
                 $entityManager->flush();
@@ -140,4 +127,3 @@ class ConfigController extends AbstractController
         ]);
     }
 }
-

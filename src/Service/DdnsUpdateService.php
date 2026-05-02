@@ -33,7 +33,6 @@ class DdnsUpdateService
         $startedAt = microtime(true);
         $config = $this->ddnsConfigService->getOrCreate();
         $log = $this->ddnsLogger->newEntryFromRequest($request);
-        $log->setConfiguredIpv6($config->getManualIpv6());
         $log->setNormalizedRecordName($this->ddnsConfigService->normalizeRecordName($config));
 
         $response = null;
@@ -48,9 +47,11 @@ class DdnsUpdateService
             }
 
             $username = $request->query->get('username');
-            $password = $request->query->get('password');
+            $password = $request->query->get('password') ?? $request->query->get('pass');
             $domain = mb_strtolower(trim((string) $request->query->get('domain')));
-            $ipaddr = trim((string) $request->query->get('ipaddr'));
+            $ipaddr = trim((string) ($request->query->get('ipaddr') ?? $request->query->get('ipv4')));
+            $ipv6 = trim((string) ($request->query->get('ipv6') ?? $request->query->get('ip6addr')));
+            $log->setConfiguredIpv6('' !== $ipv6 ? $ipv6 : null);
 
             if (!$this->ddnsAuthenticator->verify($config, $username, $password)) {
                 $log->setAuthSuccess(false);
@@ -81,6 +82,16 @@ class DdnsUpdateService
                     return $response;
                 }
             }
+            if ($config->isIpv6Enabled()) {
+                $ipv6Validation = $this->publicIpValidator->validatePublicIpv6($ipv6);
+                if (!$ipv6Validation->isValid()) {
+                    $log->setResult(DdnsResult::ValidationFailed);
+                    $log->setMessage($ipv6Validation->getMessage());
+                    $response = new DdnsUpdateResponse(400, DdnsResult::ValidationFailed, 'badip');
+
+                    return $response;
+                }
+            }
 
             $lock = $this->lockFactory->createLock($this->buildLockKey($config), 15.0);
             if (!$lock->acquire(true)) {
@@ -92,7 +103,7 @@ class DdnsUpdateService
             }
 
             try {
-                $outcome = $this->dnsRecordSynchronizer->syncForFritzbox($config, $ipaddr, $log);
+                $outcome = $this->dnsRecordSynchronizer->syncForFritzbox($config, $ipaddr, $ipv6, $log);
             } finally {
                 $lock->release();
             }
@@ -152,4 +163,3 @@ class DdnsUpdateService
         return 'ddns_update_'.$zoneId.'_'.$recordName;
     }
 }
-

@@ -21,7 +21,7 @@
         </article>
         <article class="card">
             <h3 title="Aktueller AAAA-Record">🟩 IPv6 (AAAA)</h3>
-            <p>{{ aaaaRecord ? aaaaRecord.value : (config.manualIpv6 ?: 'kein Wert') }}</p>
+            <p>{{ aaaaRecord ? aaaaRecord.value : 'kein Wert' }}</p>
             <small>Status: {{ config.ipv6Enabled ? 'aktiv' : 'inaktiv' }}</small>
         </article>
         <article class="card">

@@ -27,19 +27,33 @@ class DnsRecordSynchronizer
     ) {
     }
 
-    public function syncForFritzbox(DdnsConfig $config, string $ipv4, ?DdnsLog $logEntry = null, bool $force = false): SyncOutcome
+    public function syncForFritzbox(
+        DdnsConfig $config,
+        ?string $ipv4,
+        ?string $ipv6,
+        ?DdnsLog $logEntry = null,
+        bool $force = false,
+    ): SyncOutcome
     {
-        $targetIpv4 = $this->validatePublicIpv4OrFail($ipv4);
+        $targetIpv4 = null;
+        if ($config->isIpv4Enabled()) {
+            $targetIpv4 = $this->validatePublicIpv4OrFail($ipv4);
+        }
+
+        $targetIpv6 = null;
+        if ($config->isIpv6Enabled()) {
+            $targetIpv6 = $this->validatePublicIpv6OrFail($ipv6);
+        }
 
         return $this->syncInternal(
             $config,
-            $config->isIpv4Enabled() ? $targetIpv4 : null,
-            true,
-            $this->resolveConfiguredIpv6Target($config),
-            true,
+            $targetIpv4,
+            $config->isIpv4Enabled(),
+            $targetIpv6,
+            $config->isIpv6Enabled(),
             $force,
             IpHistorySource::Fritzbox,
-            IpHistorySource::Sync,
+            IpHistorySource::Fritzbox,
             $logEntry,
         );
     }
@@ -57,8 +71,8 @@ class DnsRecordSynchronizer
             $config,
             $targetIpv4,
             $manageIpv4,
-            $this->resolveConfiguredIpv6Target($config),
-            true,
+            null,
+            !$config->isIpv6Enabled(),
             $force,
             IpHistorySource::Sync,
             IpHistorySource::Manual,
@@ -79,25 +93,6 @@ class DnsRecordSynchronizer
             IpHistorySource::Delete,
             $logEntry,
         );
-    }
-
-    private function resolveConfiguredIpv6Target(DdnsConfig $config): ?string
-    {
-        if (!$config->isIpv6Enabled()) {
-            return null;
-        }
-
-        $ipv6 = $config->getManualIpv6();
-        if (null === $ipv6 || '' === trim($ipv6)) {
-            throw new ConfigurationException('IPv6 ist aktiviert, aber keine manuelle IPv6-Adresse gesetzt.');
-        }
-
-        $ipv6Validation = $this->publicIpValidator->validatePublicIpv6($ipv6);
-        if (!$ipv6Validation->isValid()) {
-            throw new ConfigurationException($ipv6Validation->getMessage() ?? 'Ungültige IPv6.');
-        }
-
-        return trim($ipv6);
     }
 
     private function syncInternal(
@@ -182,6 +177,16 @@ class DnsRecordSynchronizer
         }
 
         return trim((string) $ipv4);
+    }
+
+    private function validatePublicIpv6OrFail(?string $ipv6): string
+    {
+        $ipv6Validation = $this->publicIpValidator->validatePublicIpv6($ipv6);
+        if (!$ipv6Validation->isValid()) {
+            throw new ConfigurationException($ipv6Validation->getMessage() ?? 'Ungültige IPv6.');
+        }
+
+        return trim((string) $ipv6);
     }
 
     /**

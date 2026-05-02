@@ -70,10 +70,6 @@ class DdnsConfigService
         if (!$config->isIpv4Enabled() && !$config->isIpv6Enabled()) {
             $errors[] = 'Mindestens IPv4 oder IPv6 muss aktiviert sein.';
         }
-        if ($config->isIpv6Enabled() && (null === $config->getManualIpv6() || '' === trim((string) $config->getManualIpv6()))) {
-            $errors[] = 'IPv6 ist aktiviert, aber keine manuelle IPv6 gesetzt.';
-        }
-
         $subdomainViolations = $this->validator->validate($config->getSubdomain(), [
             new Assert\NotBlank(message: 'Subdomain darf nicht leer sein.'),
             new Assert\Regex(
@@ -103,4 +99,3 @@ class DdnsConfigService
         }
     }
 }
-

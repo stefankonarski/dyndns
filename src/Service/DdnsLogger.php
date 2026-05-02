@@ -22,7 +22,8 @@ class DdnsLogger
         $log->setHttpMethod($request->getMethod());
         $log->setUsername($request->query->get('username'));
         $log->setRequestedDomain($request->query->get('domain'));
-        $log->setIpaddr($request->query->get('ipaddr'));
+        $log->setIpaddr($request->query->get('ipaddr') ?? $request->query->get('ipv4'));
+        $log->setConfiguredIpv6($request->query->get('ipv6') ?? $request->query->get('ip6addr'));
         $log->setClientIp($request->getClientIp() ?? $request->server->get('REMOTE_ADDR'));
         $log->setUserAgent($request->headers->get('User-Agent'));
 
@@ -49,4 +50,3 @@ class DdnsLogger
         return trim($message);
     }
 }
-

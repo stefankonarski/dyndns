@@ -227,6 +227,29 @@ class DdnsUpdateServiceTest extends TestCase
         self::assertSame('911 lock_failed', $response->getMessage());
     }
 
+    public function testIpv6MissingWhenEnabled(): void
+    {
+        $config = $this->createBaseConfig();
+        $config->setIpv6Enabled(true);
+
+        $sync = $this->createMock(DnsRecordSynchronizer::class);
+        $sync->expects(self::never())->method('syncForFritzbox');
+        [$service, $logger] = $this->createService($config, $sync);
+        $logger->expects(self::once())->method('save');
+
+        $request = new Request([
+            'username' => 'fritz',
+            'password' => 'my-ddns-password',
+            'domain' => 'example.org',
+            'ipaddr' => '1.1.1.1',
+        ]);
+
+        $response = $service->handle($request);
+        self::assertSame(400, $response->getHttpStatus());
+        self::assertSame(DdnsResult::ValidationFailed, $response->getResult());
+        self::assertSame('badip', $response->getMessage());
+    }
+
     /**
      * @return array{0: DdnsUpdateService, 1: DdnsLogger&MockObject}
      */
