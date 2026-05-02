@@ -1,5 +1,7 @@
 # DynDNS Service (Symfony)
 
+[To the German version](README.de.md)
+
 Custom DynDNS system for Fritzbox updates using the Hetzner DNS API.
 
 ## Stack
