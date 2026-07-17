@@ -1,0 +1,8 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "local>infra/infra-renovate",
+    "local>infra/infra-renovate:docker",
+    "local>infra/infra-renovate:symfony"
+  ]
+}
